@@ -62,7 +62,7 @@ def main(stdscr, file_path):
 
         ch = stdscr.getch()
 
-        # Quitting menu
+        # Quit menu
         if ch == 27:  # 27 is the ASCII code for the "Esc" key
             quitting_menu = True
         elif quitting_menu:
@@ -105,56 +105,35 @@ def main(stdscr, file_path):
                 if cursor_position < len(metadata[edit_key]):
                     cursor_position += 1
             elif ch == 127:  # Backspace key
-                if delete_mode:
-                    if cursor_line < len(metadata):
-                        line = metadata[edit_key].split("\n")
-                        if cursor_line < len(line):
-                            current = line[cursor_line]
-                            if cursor_position > 0:
-                                line[cursor_line] = current[:cursor_position-1] + current[cursor_position:]
-                                metadata[edit_key] = "\n".join(line)
-                                cursor_position -= 1
-                        elif cursor_line == len(line) - 1:
-                            metadata[edit_key] = "\n".join(line[:-1])
-                else:
-                    line = metadata[edit_key].split("\n")
-                    if cursor_line < len(line):
-                        current = line[cursor_line]
-                        if cursor_position > 0:
-                            line[cursor_line] = current[:cursor_position-1] + current[cursor_position:]
-                            metadata[edit_key] = "\n".join(line)
-                            cursor_position -= 1
-                        elif cursor_line > 0:
-                            line_above = line[cursor_line-1]
-                            cursor_position = len(line_above)
-                            line[cursor_line-1] = line_above + current
-                            line.pop(cursor_line)
-                            metadata[edit_key] = "\n".join(line)
-                            cursor_line -= 1
+                line = metadata[edit_key].split("\n")
+                if cursor_line < len(line):
+                    current = line[cursor_line]
+                    if cursor_position > 0:
+                        line[cursor_line] = current[:cursor_position-1] + current[cursor_position:]
+                        metadata[edit_key] = "\n".join(line)
+                        cursor_position -= 1
+                    elif cursor_line > 0:
+                        line_above = line[cursor_line-1]
+                        cursor_position = len(line_above)
+                        line[cursor_line-1] = line_above + current
+                        line.pop(cursor_line)
+                        metadata[edit_key] = "\n".join(line)
+                        cursor_line -= 1
+                    else:
+                        line[cursor_line] = current[cursor_position:]
+                        metadata[edit_key] = "\n".join(line)
             elif ch == 330:  # Delete key
-                if delete_mode:
-                    if cursor_line < len(metadata):
-                        line = metadata[edit_key].split("\n")
-                        if cursor_line < len(line):
-                            current = line[cursor_line]
-                            if cursor_position < len(current):
-                                line[cursor_line] = current[:cursor_position] + current[cursor_position+1:]
-                                metadata[edit_key] = "\n".join(line)
-                        elif cursor_line == len(line) - 1:
-                            metadata[edit_key] = "\n".join(line[:-1])
-                else:
-                    line = metadata[edit_key].split("\n")
-                    if cursor_line < len(line):
-                        current = line[cursor_line]
-                        if cursor_position < len(current):
-                            line[cursor_line] = current[:cursor_position] + current[cursor_position+1:]
-                            metadata[edit_key] = "\n".join(line)
-                        elif cursor_line < len(line) - 1:
-                            line_below = line[cursor_line+1]
-                            cursor_position = len(current)
-                            line[cursor_line] = current + line_below
-                            line.pop(cursor_line+1)
-                            metadata[edit_key] = "\n".join(line)
+                line = metadata[edit_key].split("\n")
+                if cursor_line < len(line):
+                    current = line[cursor_line]
+                    if cursor_position < len(current):
+                        line[cursor_line] = current[:cursor_position] + current[cursor_position+1:]
+                        metadata[edit_key] = "\n".join(line)
+                    elif cursor_line < len(line) - 1:
+                        line_below = line[cursor_line+1]
+                        line[cursor_line] = current + line_below
+                        line.pop(cursor_line+1)
+                        metadata[edit_key] = "\n".join(line)
             elif ch == 10 or ch == 13:  # Enter key
                 line = metadata[edit_key].split("\n")
                 line.insert(cursor_line+1, "")
