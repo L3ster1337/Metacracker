@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL import Image, PngImagePlugin
 import os
 import sys
 import PyPDF2
@@ -33,9 +33,25 @@ def save_metadata(file_path, metadata):
 
             with open(file_path, 'wb') as output_file:
                 writer.write(output_file)
-    elif file_path.lower().endswith((".jpg", ".jpeg", ".png", ".gif")):
+
+    elif file_path.lower().endswith((".jpg", ".jpeg")):
         with Image.open(file_path) as img:
-            img.save(file_path, **metadata)
+            if metadata.get('exif') is not None:
+                img.save(file_path, exif=metadata.get('exif'))
+            else:
+                img.save(file_path)
+
+    elif file_path.lower().endswith(".png"):
+        with Image.open(file_path) as img:
+            metadata_dict = {}
+            for key, value in metadata.items():
+                if isinstance(value, str):
+                    metadata_dict[key] = value
+            png_info = PngImagePlugin.PngInfo()
+            for key, value in metadata_dict.items():
+                png_info.add_text(key, value)
+            img.save(file_path, pnginfo=png_info)
+
     else:
         print("Unsupported file type")
         sys.exit(1)
@@ -62,7 +78,7 @@ def main(stdscr, file_path):
         # Display metadata
         keys = list(metadata.keys())
         if not keys:
-            stdscr.addstr(0, 0, "No metadata available")
+            stdscr.addstr(0, 0, "No metadata available", curses.A_NORMAL)
         else:
             for idx, key in enumerate(keys):
                 value = metadata[key]
@@ -70,7 +86,7 @@ def main(stdscr, file_path):
                     display_text = f"{key}: {value}"
                 else:
                     display_text = f"{key}: {str(value)}"
-                stdscr.addstr(idx, 0, display_text)
+                stdscr.addnstr(idx, 0, display_text, width - 1, curses.A_NORMAL)
 
         if quitting_menu:
             # Display "Quit menu" in the footer
