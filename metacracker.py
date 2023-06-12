@@ -31,8 +31,6 @@ def main(stdscr, file_path):
     quitting_menu = False
     quit_key = ""
     editing = False
-    edit_key = ""
-    delete_mode = False
     cursor_line = 0
     cursor_position = 0
 
@@ -43,7 +41,9 @@ def main(stdscr, file_path):
         height, width = stdscr.getmaxyx()
 
         # Display metadata
-        for idx, (key, value) in enumerate(metadata.items()):
+        keys = list(metadata.keys())
+        for idx, key in enumerate(keys):
+            value = metadata[key]
             display_text = f"{key}: {value}"
             stdscr.addstr(idx, 0, display_text)
 
@@ -56,7 +56,7 @@ def main(stdscr, file_path):
 
         # Draw the cursor
         if editing:
-            stdscr.addstr(cursor_line, len(edit_key) + 2 + cursor_position, " ", curses.A_REVERSE)
+            stdscr.addstr(cursor_line, cursor_position, " ", curses.A_REVERSE)
 
         stdscr.refresh()
 
@@ -79,74 +79,38 @@ def main(stdscr, file_path):
                 quit_key += chr(ch)
         
         # Editing mode
-        elif ch == curses.KEY_IC:  # Insert key
+        elif ch == 14:  # Ctrl + n
             editing = not editing
             if editing:
-                edit_key = next(iter(metadata)) if metadata else ""
-                cursor_position = len(metadata[edit_key])
+                cursor_position = len(keys[0]) + 2 if keys else 0
             else:
-                edit_key = ""
+                cursor_position = 0
 
         elif editing:
-            if ch == curses.KEY_DOWN:
+            key = keys[cursor_line]
+            value = metadata[key]
+            max_cursor_position = len(key) + 2 + len(value)
+
+            if ch == curses.KEY_DOWN and cursor_line < len(keys) - 1:
                 cursor_line += 1
-                if cursor_line >= len(metadata):
-                    cursor_line = len(metadata) - 1
-                cursor_position = min(cursor_position, len(metadata[edit_key]))
-            elif ch == curses.KEY_UP:
+                cursor_position = min(cursor_position, len(keys[cursor_line]) + 2 + len(metadata[keys[cursor_line]]))
+            elif ch == curses.KEY_UP and cursor_line > 0:
                 cursor_line -= 1
-                if cursor_line < 0:
-                    cursor_line = 0
-                cursor_position = min(cursor_position, len(metadata[edit_key]))
-            elif ch == curses.KEY_LEFT:
-                if cursor_position > 0:
-                    cursor_position -= 1
-            elif ch == curses.KEY_RIGHT:
-                if cursor_position < len(metadata[edit_key]):
-                    cursor_position += 1
+                cursor_position = min(cursor_position, len(keys[cursor_line]) + 2 + len(metadata[keys[cursor_line]]))
+            elif ch == curses.KEY_LEFT and cursor_position > len(key) + 2:
+                cursor_position -= 1
+            elif ch == curses.KEY_RIGHT and cursor_position < max_cursor_position:
+                cursor_position += 1
             elif ch == 127:  # Backspace key
-                line = metadata[edit_key].split("\n")
-                if cursor_line < len(line):
-                    current = line[cursor_line]
-                    if cursor_position > 0:
-                        line[cursor_line] = current[:cursor_position-1] + current[cursor_position:]
-                        metadata[edit_key] = "\n".join(line)
-                        cursor_position -= 1
-                    elif cursor_line > 0:
-                        line_above = line[cursor_line-1]
-                        cursor_position = len(line_above)
-                        line[cursor_line-1] = line_above + current
-                        line.pop(cursor_line)
-                        metadata[edit_key] = "\n".join(line)
-                        cursor_line -= 1
-                    else:
-                        line[cursor_line] = current[cursor_position:]
-                        metadata[edit_key] = "\n".join(line)
+                if cursor_position > len(key) + 2:
+                    metadata[key] = value[:cursor_position - len(key) - 3] + value[cursor_position - len(key) - 2:]
+                    cursor_position = max(cursor_position - 1, len(key) + 2)
             elif ch == 330:  # Delete key
-                line = metadata[edit_key].split("\n")
-                if cursor_line < len(line):
-                    current = line[cursor_line]
-                    if cursor_position < len(current):
-                        line[cursor_line] = current[:cursor_position] + current[cursor_position+1:]
-                        metadata[edit_key] = "\n".join(line)
-                    elif cursor_line < len(line) - 1:
-                        line_below = line[cursor_line+1]
-                        line[cursor_line] = current + line_below
-                        line.pop(cursor_line+1)
-                        metadata[edit_key] = "\n".join(line)
-            elif ch == 10 or ch == 13:  # Enter key
-                line = metadata[edit_key].split("\n")
-                line.insert(cursor_line+1, "")
-                metadata[edit_key] = "\n".join(line)
-                cursor_line += 1
-                cursor_position = 0
+                if cursor_position < max_cursor_position:
+                    metadata[key] = value[:cursor_position - len(key) - 2] + value[cursor_position - len(key) - 1:]
             elif ch < 256:
-                line = metadata[edit_key].split("\n")
-                if cursor_line < len(line):
-                    current = line[cursor_line]
-                    line[cursor_line] = current[:cursor_position] + chr(ch) + current[cursor_position:]
-                    metadata[edit_key] = "\n".join(line)
-                    cursor_position += 1
+                metadata[key] = value[:cursor_position - len(key) - 2] + chr(ch) + value[cursor_position - len(key) - 2:]
+                cursor_position += 1
 
     stdscr.clear()
     stdscr.refresh()
