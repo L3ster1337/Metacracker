@@ -1,26 +1,52 @@
 from PIL import Image
 import os
 import sys
+import PyPDF2
 import curses
 
 
-def extract_file_metadata(file_path):
-    with Image.open(file_path) as img:
-        metadata = img.info
+def extract_metadata(file_path, file_type):
+    if file_type == "pdf":
+        with open(file_path, 'rb') as file:
+            reader = PyPDF2.PdfReader(file)
+            metadata = reader.metadata
+    elif file_type in ["jpg", "jpeg", "png", "gif"]:
+        with Image.open(file_path) as img:
+            metadata = img.info
+    else:
+        print(f"Unsupported file type: {file_type}")
+        sys.exit(1)
+
     return {key: metadata[key] for key in metadata}
 
 
-def save_file_metadata(file_path, metadata):
-    with Image.open(file_path) as img:
-        img.save(file_path, **metadata)
+def save_metadata(file_path, file_type, metadata):
+    if file_type == "pdf":
+        with open(file_path, 'rb') as file:
+            reader = PyPDF2.PdfReader(file)
+            writer = PyPDF2.PdfWriter()
+
+            for page in reader.pages:
+                writer.add_page(page)
+
+            writer.add_metadata(metadata)
+
+            with open(file_path, 'wb') as output_file:
+                writer.write(output_file)
+    elif file_type in ["jpg", "jpeg", "png", "gif"]:
+        with Image.open(file_path) as img:
+            img.save(file_path, **metadata)
+    else:
+        print(f"Unsupported file type: {file_type}")
+        sys.exit(1)
 
 
-def main(stdscr, file_path):
+def main(stdscr, file_path, file_type):
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
         sys.exit(1)
 
-    metadata = extract_file_metadata(file_path)
+    metadata = extract_metadata(file_path, file_type)
     quitting_menu = False
     quit_key = ""
     editing = False
@@ -78,7 +104,7 @@ def main(stdscr, file_path):
                 quit_key += chr(ch)
 
         # Editing mode
-        elif ch == 14:  # Ctrl + N
+        elif ch == 14:  # Ctrl + n
             editing = not editing
             if editing and keys:
                 cursor_position = len(keys[0]) + 2
@@ -88,10 +114,7 @@ def main(stdscr, file_path):
         elif editing and keys:
             key = keys[cursor_line]
             value = metadata[key]
-            if isinstance(value, str):
-                max_cursor_position = len(key) + 2 + len(value)
-            else:
-                max_cursor_position = len(key) + 2 + len(str(value))
+            max_cursor_position = len(key) + 2 + len(str(value))
 
             if ch == curses.KEY_DOWN and cursor_line < len(keys) - 1:
                 cursor_line += 1
@@ -135,13 +158,14 @@ def main(stdscr, file_path):
     stdscr.refresh()
 
     if quit_key == ":x":
-        save_file_metadata(file_path, metadata)
+        save_metadata(file_path, file_type, metadata)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python script.py <path_to_file>")
+    if len(sys.argv) != 3:
+        print("Usage: python script.py <path_to_file> <file_type>")
         sys.exit(1)
 
     file_path = sys.argv[1]
-    curses.wrapper(main, file_path)
+    file_type = sys.argv[2].lower()
+    curses.wrapper(main, file_path, file_type)
