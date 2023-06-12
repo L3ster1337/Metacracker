@@ -5,23 +5,23 @@ import PyPDF2
 import curses
 
 
-def extract_metadata(file_path, file_type):
-    if file_type == "pdf":
+def extract_metadata(file_path):
+    if file_path.endswith(".pdf"):
         with open(file_path, 'rb') as file:
             reader = PyPDF2.PdfReader(file)
             metadata = reader.metadata
-    elif file_type in ["jpg", "jpeg", "png", "gif"]:
+    elif file_path.lower().endswith((".jpg", ".jpeg", ".png", ".gif")):
         with Image.open(file_path) as img:
             metadata = img.info
     else:
-        print(f"Unsupported file type: {file_type}")
+        print("Unsupported file type")
         sys.exit(1)
 
     return {key: metadata[key] for key in metadata}
 
 
-def save_metadata(file_path, file_type, metadata):
-    if file_type == "pdf":
+def save_metadata(file_path, metadata):
+    if file_path.endswith(".pdf"):
         with open(file_path, 'rb') as file:
             reader = PyPDF2.PdfReader(file)
             writer = PyPDF2.PdfWriter()
@@ -33,20 +33,20 @@ def save_metadata(file_path, file_type, metadata):
 
             with open(file_path, 'wb') as output_file:
                 writer.write(output_file)
-    elif file_type in ["jpg", "jpeg", "png", "gif"]:
+    elif file_path.lower().endswith((".jpg", ".jpeg", ".png", ".gif")):
         with Image.open(file_path) as img:
             img.save(file_path, **metadata)
     else:
-        print(f"Unsupported file type: {file_type}")
+        print("Unsupported file type")
         sys.exit(1)
 
 
-def main(stdscr, file_path, file_type):
+def main(stdscr, file_path):
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
         sys.exit(1)
 
-    metadata = extract_metadata(file_path, file_type)
+    metadata = extract_metadata(file_path)
     quitting_menu = False
     quit_key = ""
     editing = False
@@ -158,14 +158,13 @@ def main(stdscr, file_path, file_type):
     stdscr.refresh()
 
     if quit_key == ":x":
-        save_metadata(file_path, file_type, metadata)
+        save_metadata(file_path, metadata)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python script.py <path_to_file> <file_type>")
+    if len(sys.argv) != 2:
+        print("Usage: python script.py <path_to_file>")
         sys.exit(1)
 
     file_path = sys.argv[1]
-    file_type = sys.argv[2].lower()
-    curses.wrapper(main, file_path, file_type)
+    curses.wrapper(main, file_path)
